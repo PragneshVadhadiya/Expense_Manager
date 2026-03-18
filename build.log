@@ -1,0 +1,26 @@
+
+> temp_project@0.1.0 build
+> next build
+
+▲ Next.js 16.1.1 (Turbopack)
+- Environments: .env
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.8s
+  Running TypeScript ...
+Failed to compile.
+
+./src/components/expenses/add-transaction-dialog.tsx:74:9
+Type error: Type 'Resolver<{ Type: "income" | "expense"; Date: Date; Amount: unknown; PeopleID: string; Description?: string | undefined; CategoryID?: string | undefined; SubCategoryID?: string | undefined; ProjectID?: string | undefined; }, any, { ...; }>' is not assignable to type 'Resolver<{ Type: "income" | "expense"; Date: Date; Amount: number; PeopleID: string; Description?: string | undefined; CategoryID?: string | undefined; SubCategoryID?: string | undefined; ProjectID?: string | undefined; }, any, { ...; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ Type: "income" | "expense"; Date: Date; Amount: number; PeopleID: string; Description?: string | undefined; CategoryID?: string | undefined; SubCategoryID?: string | undefined; ProjectID?: string | undefined; }>' is not assignable to type 'ResolverOptions<{ Type: "income" | "expense"; Date: Date; Amount: unknown; PeopleID: string; Description?: string | undefined; CategoryID?: string | undefined; SubCategoryID?: string | undefined; ProjectID?: string | undefined; }>'.
+      Type 'unknown' is not assignable to type 'number'.
+
+[0m [90m 72 |[39m
+ [90m 73 |[39m     [36mconst[39m form [33m=[39m useForm[33m<[39m[33mz[39m[33m.[39minfer[33m<[39m[36mtypeof[39m formSchema[33m>>[39m({
+[31m[1m>[22m[39m[90m 74 |[39m         resolver[33m:[39m zodResolver(formSchema)[33m,[39m
+ [90m    |[39m         [31m[1m^[22m[39m
+ [90m 75 |[39m         defaultValues[33m:[39m {
+ [90m 76 |[39m             [33mType[39m[33m:[39m [32m"expense"[39m[33m,[39m
+ [90m 77 |[39m             [33mDate[39m[33m:[39m [36mnew[39m [33mDate[39m()[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: null
