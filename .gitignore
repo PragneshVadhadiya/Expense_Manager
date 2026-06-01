@@ -40,5 +40,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Keep generated prisma client committed for Vercel deployment
-# /src/generated/prisma
+# Generated Prisma client - regenerated on each platform during build
+/src/generated/prisma
