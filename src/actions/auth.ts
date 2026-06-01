@@ -69,11 +69,129 @@ const signupSchema = z.object({
     role: z.string().default("User"),
 });
 
+async function seedDefaultUserData(userId: number, name: string, email: string, mobile: string) {
+    try {
+        // 1. Create default Person (Peoples)
+        await db.peoples.create({
+            data: {
+                PeopleCode: "SELF",
+                Password: "pass123",
+                PeopleName: name,
+                Email: email,
+                MobileNo: mobile,
+                Description: "Default self profile",
+                UserID: userId,
+                IsActive: true,
+                Created: new Date(),
+                Modified: new Date(),
+            }
+        });
+
+        // 2. Create default projects
+        const defaultProjects = [
+            { name: "General Operations", detail: "General daily operations and standard budget" },
+            { name: "Personal Budget", detail: "Personal allowances, hobbies, and personal spendings" }
+        ];
+
+        for (const proj of defaultProjects) {
+            await db.projects.create({
+                data: {
+                    ProjectName: proj.name,
+                    ProjectDetail: proj.detail,
+                    UserID: userId,
+                    IsActive: true,
+                    Created: new Date(),
+                    Modified: new Date(),
+                }
+            });
+        }
+
+        // 3. Create default categories & subcategories
+        const DEFAULT_CATEGORIES = [
+            {
+                name: "Food & Dining",
+                isIncome: false,
+                isExpense: true,
+                subs: ["Groceries", "Restaurants", "Coffee Shops", "Fast Food"]
+            },
+            {
+                name: "Housing & Utilities",
+                isIncome: false,
+                isExpense: true,
+                subs: ["Rent/Mortgage", "Electricity", "Water", "Internet", "Gas"]
+            },
+            {
+                name: "Transportation",
+                isIncome: false,
+                isExpense: true,
+                subs: ["Fuel", "Public Transport", "Ride Sharing", "Vehicle Maintenance"]
+            },
+            {
+                name: "Entertainment & Leisure",
+                isIncome: false,
+                isExpense: true,
+                subs: ["Movies & Streaming", "Hobbies", "Gifts", "Vacation/Travel"]
+            },
+            {
+                name: "Healthcare",
+                isIncome: false,
+                isExpense: true,
+                subs: ["Medicines", "Doctor Consultations", "Health Insurance"]
+            },
+            {
+                name: "Salary & Wages",
+                isIncome: true,
+                isExpense: false,
+                subs: ["Full-time Job", "Freelance", "Bonus"]
+            },
+            {
+                name: "Investments & Interest",
+                isIncome: true,
+                isExpense: false,
+                subs: ["Stock Market", "Savings Interest", "Rental Income"]
+            }
+        ];
+
+        for (const cat of DEFAULT_CATEGORIES) {
+            const dbCat = await db.categories.create({
+                data: {
+                    CategoryName: cat.name,
+                    IsIncome: cat.isIncome,
+                    IsExpense: cat.isExpense,
+                    IsActive: true,
+                    UserID: userId,
+                    Created: new Date(),
+                    Modified: new Date(),
+                }
+            });
+
+            for (const sub of cat.subs) {
+                await db.sub_categories.create({
+                    data: {
+                        SubCategoryName: sub,
+                        IsActive: true,
+                        CategoryID: dbCat.CategoryID,
+                        UserID: userId,
+                        IsExpense: cat.isExpense,
+                        IsIncome: cat.isIncome,
+                        Created: new Date(),
+                        Modified: new Date(),
+                    }
+                });
+            }
+        }
+    } catch (err) {
+        console.error("Error seeding default user data:", err);
+    }
+}
+
 export async function signup(prevState: any, formData: FormData) {
     const name = formData.get("signup-name") as string;
     const email = formData.get("signup-email") as string;
     const password = formData.get("signup-password") as string;
     const role = formData.get("signup-role") as string || "User";
+    const mobile = formData.get("signup-mobile") as string || "N/A";
+    const profileImage = formData.get("signup-profile-image") as string || `https://api.dicebear.com/7.x/adventurer/svg?seed=${name}`;
 
     const validated = signupSchema.safeParse({ name, email, password, role });
 
@@ -97,12 +215,16 @@ export async function signup(prevState: any, formData: FormData) {
                 UserName: name,
                 EmailAddress: email,
                 Password: password, // In a real app, hash this!
-                MobileNo: "N/A", // Default value as it is required but not in form
+                MobileNo: mobile,
+                ProfileImage: profileImage,
                 Role: role,
                 Created: new Date(),
                 Modified: new Date(),
             },
         });
+
+        // Seed default categories, subcategories, projects and peoples so they can select them right away!
+        await seedDefaultUserData(newUser.UserID, newUser.UserName, newUser.EmailAddress, newUser.MobileNo);
 
         const cookieStore = await cookies();
         cookieStore.set("userId", newUser.UserID.toString(), {

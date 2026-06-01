@@ -52,17 +52,7 @@ export default function Home() {
             </Button>
           </div>
 
-          <div className="pt-8 flex items-center justify-center md:justify-start gap-8 opacity-80 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500">
-            <div>
-              <h3 className="text-3xl font-bold text-foreground">50K+</h3>
-              <p className="text-muted-foreground text-sm">Active Users</p>
-            </div>
-            <div className="w-px h-10 bg-border"></div>
-            <div>
-              <h3 className="text-3xl font-bold text-foreground">4.9</h3>
-              <p className="text-muted-foreground text-sm">App Rating</p>
-            </div>
-          </div>
+
         </div>
 
         {/* Right Content - Abstract Mockup */}

@@ -3,7 +3,7 @@ const prisma = new PrismaClient()
 
 const CATEGORIES = [
     { name: "Salary",            isIncome: true,  isExpense: false, subs: ["Basic Pay", "Dearness Allowance", "HRA", "Bonus", "Overtime", "Commission"] },
-    { name: "Freelance",         isIncome: true,  isExpense: false, subs: ["Web Development", "Graphic Design", "Content Writing", "Consultation", "Photography"] },
+    { name: "Freelance Income",  isIncome: true,  isExpense: false, subs: ["Web Development", "Graphic Design", "Content Writing", "Consultation", "Photography"] },
     { name: "Business Income",   isIncome: true,  isExpense: false, subs: ["Product Sales", "Service Revenue", "Online Sales", "Rental Income"] },
     { name: "Investment Returns", isIncome: true, isExpense: false, subs: ["Stock Dividends", "Mutual Funds", "FD Interest", "PPF Interest", "Crypto Gains"] },
     { name: "Other Income",      isIncome: true,  isExpense: false, subs: ["Gifts Received", "Tax Refund", "Cashback", "Insurance Payout"] },
@@ -16,7 +16,7 @@ const CATEGORIES = [
     { name: "Entertainment",     isIncome: false, isExpense: true,  subs: ["Movies", "OTT Subscriptions", "Concerts/Events", "Gaming", "Hobbies"] },
     { name: "Communication",     isIncome: false, isExpense: true,  subs: ["Mobile Recharge", "Broadband/Internet", "Cable/DTH", "Streaming Services"] },
     { name: "Personal Care",     isIncome: false, isExpense: true,  subs: ["Salon & Haircut", "Skincare", "Cosmetics", "Spa & Wellness", "Dental Care"] },
-    { name: "Savings & Investments", isIncome: false, isExpense: true, subs: ["SIP", "Recurring Deposit", "PPF", "LIC Premium", "Emergency Fund", "Gold Purchase"] },
+    { name: "Savings & Investment", isIncome: false, isExpense: true, subs: ["SIP", "Recurring Deposit", "PPF", "LIC Premium", "Emergency Fund", "Gold Purchase"] },
     { name: "Travel & Vacation", isIncome: false, isExpense: true,  subs: ["Flights", "Hotels", "Bus/Train Tickets", "Travel Insurance", "Sightseeing", "Visa Fees"] },
     { name: "Gifts & Donations", isIncome: false, isExpense: true,  subs: ["Birthday Gifts", "Wedding Gifts", "Festival Expenses", "Charity/NGO Donation"] },
     { name: "Business Expenses", isIncome: false, isExpense: true,  subs: ["Office Rent", "Software/Tools", "Advertising", "Employee Salary", "Office Supplies"] },

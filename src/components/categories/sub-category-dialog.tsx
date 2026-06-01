@@ -77,7 +77,7 @@ export function SubCategoryDialog({ categoryId }: { categoryId: number }) {
                                 <FormItem>
                                     <FormLabel>Subcategory Name</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="E.g. Bonus, Supplies..." {...field} />
+                                        <Input placeholder="E.g. Bonus, Supplies..." {...field} value={field.value ?? ""} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

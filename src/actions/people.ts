@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { getUserId } from "@/lib/auth-helper";
 
 const personSchema = z.object({
     PeopleName: z.string().min(1, "Name is required"),
@@ -14,25 +15,6 @@ const personSchema = z.object({
 });
 
 export type PersonFormData = z.infer<typeof personSchema>;
-
-// Helper to get a valid UserID (simulating auth for now)
-async function getUserId() {
-    const user = await db.users.findFirst();
-    if (user) return user.UserID;
-
-    // Create a default user if none exists
-    const newUser = await db.users.create({
-        data: {
-            UserName: "Demo User",
-            EmailAddress: "demo@example.com",
-            Password: "password",
-            MobileNo: "0000000000",
-            Created: new Date(),
-            Modified: new Date(),
-        }
-    });
-    return newUser.UserID;
-}
 
 export async function getPeople() {
     try {

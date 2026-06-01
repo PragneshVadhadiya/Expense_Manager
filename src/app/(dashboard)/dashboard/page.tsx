@@ -6,29 +6,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, Legend, LineChart, Line } from "recharts"
 import { Button } from "@/components/ui/button"
 import { ArrowDownIcon, ArrowUpIcon, IndianRupee, CreditCard, Activity, TrendingUp, FileText, Download } from "lucide-react"
-
-// Mock Data
-const data = [
-    { name: "Jan", total: 1200, expenses: 1400 }, // Expenses > Income
-    { name: "Feb", total: 2100, expenses: 1200 }, // Income > Expenses (Crossed)
-    { name: "Mar", total: 1800, expenses: 2000 }, // Expenses > Income (Crossed)
-    { name: "Apr", total: 2400, expenses: 1600 }, // Income > Expenses (Crossed)
-    { name: "May", total: 1500, expenses: 1700 }, // Expenses > Income (Crossed)
-    { name: "Jun", total: 3200, expenses: 2200 }, // Income > Expenses (Crossed)
-]
-
-const pieData = [
-    { name: "Rent", value: 1200, color: "hsl(270, 70%, 55%)" },
-    { name: "Food", value: 800, color: "hsl(160, 60%, 45%)" },
-    { name: "Utilities", value: 450, color: "hsl(30, 80%, 55%)" },
-    { name: "Entertainment", value: 300, color: "hsl(210, 70%, 50%)" },
-    { name: "Others", value: 200, color: "hsl(340, 75%, 55%)" },
-]
+import { getExpensesData } from "@/actions/expenses"
 
 const COLORS = ['hsl(270, 70%, 55%)', 'hsl(160, 60%, 45%)', 'hsl(30, 80%, 55%)', 'hsl(210, 70%, 50%)', 'hsl(340, 75%, 55%)'];
 
 export default function DashboardPage() {
     const [isAdmin, setIsAdmin] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [dashboardData, setDashboardData] = useState<{
+        transactions: any[];
+        categories: any[];
+        subCategories: any[];
+        projects: any[];
+        people: any[];
+    }>({
+        transactions: [],
+        categories: [],
+        subCategories: [],
+        projects: [],
+        people: []
+    });
 
     useEffect(() => {
         const cookies = document.cookie.split("; ");
@@ -37,22 +34,110 @@ export default function DashboardPage() {
             const role = decodeURIComponent(roleCookie.split("=")[1]);
             setIsAdmin(role === "Admin");
         }
+
+        async function loadData() {
+            try {
+                const data = await getExpensesData();
+                setDashboardData(data);
+            } catch (error) {
+                console.error("Failed to load dashboard data", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        loadData();
     }, []);
 
+    const { transactions = [], projects = [] } = dashboardData;
+
+    // Calculate metrics
+    const totalIncome = transactions
+        .filter((t: any) => t.Type?.toLowerCase() === 'income')
+        .reduce((sum: number, t: any) => sum + Number(t.Amount), 0);
+
+    const totalExpenses = transactions
+        .filter((t: any) => t.Type?.toLowerCase() === 'expense')
+        .reduce((sum: number, t: any) => sum + Number(t.Amount), 0);
+
+    const netIncome = totalIncome - totalExpenses;
+    const activeProjectsCount = projects.filter((p: any) => p.IsActive).length;
+
+    // Compute monthly breakdown dynamically for past 6 months
+    const last6Months = Array.from({ length: 6 }).map((_, i) => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        return {
+            key: d.toLocaleString('en-US', { month: 'short' }) + ' ' + d.getFullYear(),
+            label: d.toLocaleString('en-US', { month: 'short' }),
+            year: d.getFullYear(),
+            monthNum: d.getMonth()
+        };
+    }).reverse();
+
+    const chartData = last6Months.map(m => {
+        const monthTransactions = transactions.filter((t: any) => {
+            const tDate = new Date(t.TransactionDate);
+            return tDate.getMonth() === m.monthNum && tDate.getFullYear() === m.year;
+        });
+
+        const totalIncomeForMonth = monthTransactions
+            .filter((t: any) => t.Type?.toLowerCase() === 'income')
+            .reduce((sum: number, t: any) => sum + Number(t.Amount), 0);
+
+        const totalExpensesForMonth = monthTransactions
+            .filter((t: any) => t.Type?.toLowerCase() === 'expense')
+            .reduce((sum: number, t: any) => sum + Number(t.Amount), 0);
+
+        return {
+            name: m.label,
+            total: totalIncomeForMonth,
+            expenses: totalExpensesForMonth
+        };
+    });
+
+    // Compute Expense Distribution grouped by category for the pie chart
+    const expenseGroup: { [key: string]: number } = {};
+    transactions
+        .filter((t: any) => t.Type?.toLowerCase() === 'expense' && t.Category)
+        .forEach((t: any) => {
+            const catName = t.Category.CategoryName;
+            expenseGroup[catName] = (expenseGroup[catName] || 0) + Number(t.Amount);
+        });
+
+    const pieChartData = Object.entries(expenseGroup).map(([name, value]) => ({
+        name,
+        value,
+    })).sort((a, b) => b.value - a.value);
+
+    // Limit to top 5 categories and group the rest into "Others" to avoid a cluttered graph
+    let finalPieData = [];
+    if (pieChartData.length > 5) {
+        const topCategories = pieChartData.slice(0, 5);
+        const otherValue = pieChartData.slice(5).reduce((sum, item) => sum + item.value, 0);
+        finalPieData = [...topCategories, { name: "Others", value: otherValue }];
+    } else {
+        finalPieData = pieChartData.length > 0 ? pieChartData : [
+            { name: "No expenses", value: 1 }
+        ];
+    }
+
+    // Recent Transactions
+    const recentTransactions = transactions.slice(0, 5);
+
     const handleDownload = (reportName: string) => {
-        // Mock data for Excel/CSV export
         const csvRows = [
             ["Date", "Description", "Category", "Amount", "Type"],
-            ["2025-12-01", "Office Rent", "Rent", "-1200", "Expense"],
-            ["2025-12-05", "Client Payment - Project A", "Income", "3500", "Income"],
-            ["2025-12-10", "Team Lunch", "Food", "-250", "Expense"],
-            ["2025-12-15", "AWS Server Costs", "Utilities", "-450", "Expense"],
-            ["2025-12-20", "Freelancer Payment", "Outsourcing", "-1500", "Expense"],
-            ["2025-12-28", "Year End Bonus", "Income", "5000", "Income"],
+            ...transactions.map(t => [
+                t.TransactionDate ? new Date(t.TransactionDate).toISOString().split('T')[0] : "",
+                t.Description || "",
+                t.Category?.CategoryName || "",
+                t.Type?.toLowerCase() === 'expense' ? `-${t.Amount}` : `${t.Amount}`,
+                t.Type || ""
+            ])
         ];
 
         const csvContent = "data:text/csv;charset=utf-8,"
-            + csvRows.map(e => e.join(",")).join("\n");
+            + csvRows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")).join("\n");
 
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
@@ -63,15 +148,32 @@ export default function DashboardPage() {
         document.body.removeChild(link);
     }
 
+    if (loading) {
+        return (
+            <div className="flex-1 space-y-6 p-6 md:p-8 pt-6 animate-pulse">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-2 md:space-y-0">
+                    <div className="h-8 w-48 bg-muted rounded-lg" />
+                </div>
+                <div className="h-10 w-64 bg-muted rounded-lg" />
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="h-28 bg-muted rounded-xl" />
+                    ))}
+                </div>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
+                    <div className="col-span-4 h-[400px] bg-muted rounded-xl" />
+                    <div className="col-span-3 h-[400px] bg-muted rounded-xl" />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex-1 space-y-6 p-6 md:p-8 pt-6">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-2 md:space-y-0">
                 <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                     {isAdmin ? "Admin Dashboard" : "Dashboard Overview"}
                 </h2>
-                <div className="flex items-center space-x-2">
-                    {/* Date Range Picker Could Go Here */}
-                </div>
             </div>
             <Tabs defaultValue="overview" className="space-y-6">
                 <TabsList className="bg-muted/50 p-1 rounded-xl">
@@ -92,9 +194,9 @@ export default function DashboardPage() {
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">₹45,231.89</div>
+                                <div className="text-2xl font-bold">₹{totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                 <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                                    <span className="text-emerald-500 flex items-center mr-1"><TrendingUp className="w-3 h-3 mr-1" /> +20.1%</span> from last month
+                                    <span className="text-emerald-500 flex items-center mr-1"><TrendingUp className="w-3 h-3 mr-1" /> Active</span> live tracking
                                 </p>
                             </CardContent>
                         </Card>
@@ -108,9 +210,9 @@ export default function DashboardPage() {
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">₹12,345.00</div>
+                                <div className="text-2xl font-bold">₹{totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                                 <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                                    <span className="text-rose-500 flex items-center mr-1"><ArrowDownIcon className="w-3 h-3 mr-1" /> +4.5%</span> from last month
+                                    <span className="text-rose-500 flex items-center mr-1"><ArrowDownIcon className="w-3 h-3 mr-1" /> Tracked</span> live tracking
                                 </p>
                             </CardContent>
                         </Card>
@@ -124,9 +226,13 @@ export default function DashboardPage() {
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">₹32,886.89</div>
+                                <div className={`text-2xl font-bold ${netIncome >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                                    {netIncome >= 0 ? "+" : "-"}₹{Math.abs(netIncome).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </div>
                                 <p className="text-xs text-muted-foreground mt-1 flex items-center">
-                                    <span className="text-emerald-500 flex items-center mr-1"><TrendingUp className="w-3 h-3 mr-1" /> +15%</span> from last month
+                                    <span className={`flex items-center mr-1 ${netIncome >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                                        <TrendingUp className="w-3 h-3 mr-1" /> {netIncome >= 0 ? "Surplus" : "Deficit"}
+                                    </span> current balance
                                 </p>
                             </CardContent>
                         </Card>
@@ -140,9 +246,9 @@ export default function DashboardPage() {
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">12</div>
+                                <div className="text-2xl font-bold">{activeProjectsCount}</div>
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    +2 active now
+                                    Allocated projects
                                 </p>
                             </CardContent>
                         </Card>
@@ -154,11 +260,145 @@ export default function DashboardPage() {
                         <Card className="col-span-4 shadow-lg border-none">
                             <CardHeader>
                                 <CardTitle>Overview</CardTitle>
-                                <CardDescription>Monthly revenue breakdown</CardDescription>
+                                <CardDescription>Monthly income breakdown</CardDescription>
                             </CardHeader>
                             <CardContent className="pl-2">
-                                <ResponsiveContainer width="100%" height={350}>
-                                    <BarChart data={data}>
+                                {transactions.length === 0 ? (
+                                    <div className="h-[350px] flex items-center justify-center text-muted-foreground text-sm">
+                                        No transactions to display overview chart.
+                                    </div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height={350}>
+                                        <BarChart data={chartData}>
+                                            <XAxis
+                                                dataKey="name"
+                                                stroke="#888888"
+                                                fontSize={12}
+                                                tickLine={false}
+                                                axisLine={false}
+                                            />
+                                            <YAxis
+                                                stroke="#888888"
+                                                fontSize={12}
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tickFormatter={(value) => `₹${value}`}
+                                            />
+                                            <Tooltip
+                                                cursor={{ fill: 'transparent' }}
+                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                                formatter={(value) => [`₹${Number(value).toFixed(2)}`, "Income"]}
+                                            />
+                                            <Bar
+                                                dataKey="total"
+                                                fill="currentColor"
+                                                radius={[6, 6, 0, 0]}
+                                                className="fill-primary"
+                                            />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Pie Chart (Circle Graph) */}
+                        <Card className="col-span-3 shadow-lg border-none">
+                            <CardHeader>
+                                <CardTitle>Expense Distribution</CardTitle>
+                                <CardDescription>Where your money goes</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {pieChartData.length === 0 ? (
+                                    <div className="h-[350px] flex items-center justify-center text-muted-foreground text-sm">
+                                        No tracked expenses to show distribution.
+                                    </div>
+                                ) : (
+                                    <ResponsiveContainer width="100%" height={350}>
+                                        <PieChart>
+                                            <Pie
+                                                data={finalPieData}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={60}
+                                                outerRadius={100}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                            >
+                                                {finalPieData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip
+                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                                formatter={(value) => `₹${Number(value).toFixed(2)}`}
+                                            />
+                                            <Legend
+                                                verticalAlign="bottom"
+                                                height={36}
+                                                iconType="circle"
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Recent Expenses List */}
+                    <Card className="shadow-lg border-none">
+                        <CardHeader>
+                            <CardTitle>Recent Transactions</CardTitle>
+                            <CardDescription>
+                                {transactions.length === 0 
+                                    ? "No transactions recorded yet." 
+                                    : `Showing your latest ${recentTransactions.length} transactions.`}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-6">
+                                {recentTransactions.map((item: any) => (
+                                    <div className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg transition-colors" key={item.TransactionID}>
+                                        <div className="flex items-center gap-4">
+                                            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${item.Type?.toLowerCase() === 'income' ? 'bg-emerald-100 dark:bg-emerald-950/30' : 'bg-rose-100 dark:bg-rose-950/30'}`}>
+                                                <CreditCard className={`h-5 w-5 ${item.Type?.toLowerCase() === 'income' ? 'text-emerald-600' : 'text-rose-600'}`} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-medium leading-none">{item.Description || "Untitled Transaction"}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {item.Category?.CategoryName || "No Category"} • {item.Project?.ProjectName || "No Project"} • {item.TransactionDate ? new Date(item.TransactionDate).toLocaleDateString() : ""}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className={`font-semibold ${item.Type?.toLowerCase() === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                            {item.Type?.toLowerCase() === 'income' ? '+' : '-'}₹{Number(item.Amount).toFixed(2)}
+                                        </div>
+                                    </div>
+                                ))}
+                                {transactions.length === 0 && (
+                                    <div className="h-20 flex items-center justify-center text-muted-foreground text-sm">
+                                        No recent transactions.
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                </TabsContent>
+
+                <TabsContent value="analytics" className="space-y-6">
+                    <Card className="shadow-lg border-none">
+                        <CardHeader>
+                            <CardTitle>Financial Trends</CardTitle>
+                            <CardDescription>Income vs Expenses over time</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {transactions.length === 0 ? (
+                                <div className="h-[400px] flex items-center justify-center text-muted-foreground text-sm">
+                                    No transaction data available to plot trends.
+                                </div>
+                            ) : (
+                                <ResponsiveContainer width="100%" height={400}>
+                                    <LineChart data={chartData}>
                                         <XAxis
                                             dataKey="name"
                                             stroke="#888888"
@@ -174,116 +414,15 @@ export default function DashboardPage() {
                                             tickFormatter={(value) => `₹${value}`}
                                         />
                                         <Tooltip
-                                            cursor={{ fill: 'transparent' }}
                                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                            formatter={(value) => `₹${Number(value).toFixed(2)}`}
                                         />
-                                        <Bar
-                                            dataKey="total"
-                                            fill="currentColor"
-                                            radius={[6, 6, 0, 0]}
-                                            className="fill-primary"
-                                        />
-                                    </BarChart>
+                                        <Legend verticalAlign="top" height={36} />
+                                        <Line type="monotone" dataKey="total" name="Income" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 8 }} />
+                                        <Line type="monotone" dataKey="expenses" name="Expenses" stroke="#f43f5e" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 8 }} strokeDasharray="5 5" />
+                                    </LineChart>
                                 </ResponsiveContainer>
-                            </CardContent>
-                        </Card>
-
-                        {/* Pie Chart (Circle Graph) */}
-                        <Card className="col-span-3 shadow-lg border-none">
-                            <CardHeader>
-                                <CardTitle>Expense Distribution</CardTitle>
-                                <CardDescription>Where your money goes</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ResponsiveContainer width="100%" height={350}>
-                                    <PieChart>
-                                        <Pie
-                                            data={pieData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={100}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                        >
-                                            {pieData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                            formatter={(value) => `₹${value}`}
-                                        />
-                                        <Legend
-                                            verticalAlign="bottom"
-                                            height={36}
-                                            iconType="circle"
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Recent Expenses List */}
-                    <Card className="shadow-lg border-none">
-                        <CardHeader>
-                            <CardTitle>Recent Transactions</CardTitle>
-                            <CardDescription>You made 265 transactions this month.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-6">
-                                {[1, 2, 3, 4, 5].map((i) => (
-                                    <div className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-lg transition-colors" key={i}>
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                                <CreditCard className="h-5 w-5 text-primary" />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-sm font-medium leading-none">Office Supplies</p>
-                                                <p className="text-xs text-muted-foreground">Project X • 2 hours ago</p>
-                                            </div>
-                                        </div>
-                                        <div className="font-medium text-rose-500">-₹250.00</div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                </TabsContent>
-
-                <TabsContent value="analytics" className="space-y-6">
-                    <Card className="shadow-lg border-none">
-                        <CardHeader>
-                            <CardTitle>Financial Trends</CardTitle>
-                            <CardDescription>Income vs Expenses over time</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <ResponsiveContainer width="100%" height={400}>
-                                <LineChart data={data}>
-                                    <XAxis
-                                        dataKey="name"
-                                        stroke="#888888"
-                                        fontSize={12}
-                                        tickLine={false}
-                                        axisLine={false}
-                                    />
-                                    <YAxis
-                                        stroke="#888888"
-                                        fontSize={12}
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tickFormatter={(value) => `₹${value}`}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                    />
-                                    <Legend verticalAlign="top" height={36} />
-                                    <Line type="monotone" dataKey="total" name="Income" stroke="#8884d8" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 8 }} />
-                                    <Line type="monotone" dataKey="expenses" name="Expenses" stroke="#ff8042" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 8 }} strokeDasharray="5 5" />
-                                </LineChart>
-                            </ResponsiveContainer>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -292,32 +431,37 @@ export default function DashboardPage() {
                     <Card className="shadow-lg border-none">
                         <CardHeader>
                             <CardTitle>Generated Reports</CardTitle>
-                            <CardDescription>Download your monthly summaries.</CardDescription>
+                            <CardDescription>Download your transaction data summaries.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {[
-                                    { name: "Annual Summary 2025", date: "Jan 01, 2026", size: "2.4 MB" },
-                                    { name: "Monthly Report - December", date: "Jan 01, 2026", size: "1.2 MB" },
-                                    { name: "Monthly Report - November", date: "Dec 01, 2025", size: "1.1 MB" },
-                                    { name: "Tax Deductions 2025", date: "Dec 15, 2025", size: "850 KB" }
-                                ].map((report, i) => (
-                                    <div key={i} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                                        <div className="flex items-center gap-4">
-                                            <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                                <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                                            </div>
-                                            <div>
-                                                <p className="font-medium">{report.name}</p>
-                                                <p className="text-sm text-muted-foreground">Generated on {report.date} • {report.size}</p>
-                                            </div>
-                                        </div>
-                                        <Button variant="outline" size="sm" className="gap-2" onClick={() => handleDownload(report.name)}>
-                                            <Download className="h-4 w-4" />
-                                            Download
-                                        </Button>
+                                {transactions.length === 0 ? (
+                                    <div className="h-40 flex flex-col items-center justify-center text-muted-foreground text-sm gap-2">
+                                        <span>No transactions recorded.</span>
+                                        <span>Add transactions first to download reports.</span>
                                     </div>
-                                ))}
+                                ) : (
+                                    [
+                                        { name: "Complete Transactions Export", date: new Date().toLocaleDateString(), size: `${(transactions.length * 0.1).toFixed(1)} KB` },
+                                        { name: "Monthly Summary Report", date: new Date().toLocaleDateString(), size: "1.2 KB" }
+                                    ].map((report, i) => (
+                                        <div key={i} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                                            <div className="flex items-center gap-4">
+                                                <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                                    <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium">{report.name}</p>
+                                                    <p className="text-sm text-muted-foreground">Generated on {report.date} • {report.size}</p>
+                                                </div>
+                                            </div>
+                                            <Button variant="outline" size="sm" className="gap-2" onClick={() => handleDownload(report.name)}>
+                                                <Download className="h-4 w-4" />
+                                                Download CSV
+                                            </Button>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </CardContent>
                     </Card>

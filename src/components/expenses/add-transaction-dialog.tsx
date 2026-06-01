@@ -75,7 +75,7 @@ export function AddTransactionDialog({
         defaultValues: {
             Type: "expense",
             Date: new Date(),
-            Amount: undefined as any,
+            Amount: "" as any,
             Description: "",
             CategoryID: undefined,
             SubCategoryID: undefined,
@@ -115,7 +115,7 @@ export function AddTransactionDialog({
             form.reset({
                 Type: activeTab,
                 Date: new Date(),
-                Amount: undefined, // Reset amount
+                Amount: "" as any, // Reset amount
                 Description: "",
                 CategoryID: undefined,
                 SubCategoryID: undefined,
@@ -225,7 +225,7 @@ export function AddTransactionDialog({
                                     <FormItem>
                                         <FormLabel>Amount</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="0.00" type="number" step="0.01" {...field} />
+                                            <Input placeholder="0.00" type="number" step="0.01" {...field} value={field.value ?? ""} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -240,7 +240,7 @@ export function AddTransactionDialog({
                                 <FormItem>
                                     <FormLabel>Description</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="What was this for?" {...field} />
+                                        <Input placeholder="What was this for?" {...field} value={field.value ?? ""} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

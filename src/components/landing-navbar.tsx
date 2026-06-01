@@ -14,18 +14,7 @@ export function LandingNavbar() {
                 </Link>
             </div>
 
-            {/* Navigation Links */}
-            <div className="hidden md:flex items-center space-x-12">
-                <Link href="/" className="text-muted-foreground hover:text-primary font-medium text-sm transition-colors">
-                    Home
-                </Link>
-                <Link href="/dashboard" className="text-muted-foreground hover:text-primary font-medium text-sm transition-colors">
-                    Dashboard
-                </Link>
-                <Link href="/about" className="text-muted-foreground hover:text-primary font-medium text-sm transition-colors">
-                    About Us
-                </Link>
-            </div>
+
 
             {/* Auth Buttons */}
             <div className="flex items-center gap-4">

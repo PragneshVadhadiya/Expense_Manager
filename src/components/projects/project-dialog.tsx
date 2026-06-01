@@ -92,7 +92,7 @@ export function ProjectDialog({ project, mode = "create" }: { project?: any, mod
                                 <FormItem>
                                     <FormLabel>Project Name</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Marketing Campaign" {...field} />
+                                        <Input placeholder="Marketing Campaign" {...field} value={field.value ?? ""} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -105,7 +105,7 @@ export function ProjectDialog({ project, mode = "create" }: { project?: any, mod
                                 <FormItem>
                                     <FormLabel>Detail</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="Short description" {...field} />
+                                        <Input placeholder="Short description" {...field} value={field.value ?? ""} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -118,7 +118,7 @@ export function ProjectDialog({ project, mode = "create" }: { project?: any, mod
                                 <FormItem>
                                     <FormLabel>Budget ($)</FormLabel>
                                     <FormControl>
-                                        <Input type="number" step="0.01" {...field} />
+                                        <Input type="number" step="0.01" {...field} value={field.value ?? ""} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>

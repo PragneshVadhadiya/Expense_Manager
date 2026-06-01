@@ -2,8 +2,8 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { z } from "zod";
+import { getUserId } from "@/lib/auth-helper";
 
 const projectSchema = z.object({
     ProjectName: z.string().min(1, "Name is required"),
@@ -14,20 +14,6 @@ const projectSchema = z.object({
 });
 
 export type ProjectFormData = z.infer<typeof projectSchema>;
-
-async function getUserId() {
-    // using cookies here properly like auth.ts does or fallback to first user
-    const cookieStore = await cookies();
-    const userIdCookie = cookieStore.get("userId");
-    
-    if (userIdCookie) {
-        return parseInt(userIdCookie.value);
-    }
-    
-    // Fallback if no cookie
-    const user = await db.users.findFirst();
-    return user ? user.UserID : 1; 
-}
 
 export async function getProjects() {
     try {

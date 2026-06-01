@@ -2,8 +2,8 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { z } from "zod";
+import { getUserId } from "@/lib/auth-helper";
 
 const categorySchema = z.object({
     CategoryName: z.string().min(1, "Name is required"),
@@ -12,19 +12,6 @@ const categorySchema = z.object({
 });
 
 export type CategoryFormData = z.infer<typeof categorySchema>;
-
-async function getUserId() {
-    const cookieStore = await cookies();
-    const userIdCookie = cookieStore.get("userId");
-    
-    if (userIdCookie) {
-        return parseInt(userIdCookie.value);
-    }
-    
-    // Fallback if no cookie
-    const user = await db.users.findFirst();
-    return user ? user.UserID : 1; 
-}
 
 export async function getCategories() {
     try {

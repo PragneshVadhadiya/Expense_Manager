@@ -3,25 +3,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-
-// Helper to get a valid UserID
-async function getUserId() {
-    const user = await db.users.findFirst();
-    if (user) return user.UserID;
-
-    // Create a default user if none exists
-    const newUser = await db.users.create({
-        data: {
-            UserName: "Demo User",
-            EmailAddress: "demo@example.com",
-            Password: "password",
-            MobileNo: "0000000000",
-            Created: new Date(),
-            Modified: new Date(),
-        }
-    });
-    return newUser.UserID;
-}
+import { getUserId } from "@/lib/auth-helper";
 
 const transactionSchema = z.object({
     Type: z.enum(["income", "expense"]),
@@ -105,10 +87,10 @@ export async function getExpensesData() {
                     peoples: true
                 }
             }),
-            db.categories.findMany({ where: { UserID: userId } }),
-            db.sub_categories.findMany({ where: { UserID: userId } }),
-            db.projects.findMany({ where: { UserID: userId } }),
-            db.peoples.findMany({ where: { UserID: userId } })
+            db.categories.findMany({ where: { OR: [{ UserID: userId }, { UserID: 1 }] } }),
+            db.sub_categories.findMany({ where: { OR: [{ UserID: userId }, { UserID: 1 }] } }),
+            db.projects.findMany({ where: { OR: [{ UserID: userId }, { UserID: 1 }] } }),
+            db.peoples.findMany({ where: { OR: [{ UserID: userId }, { UserID: 1 }] } })
         ]);
 
         // Normalize and combine data
@@ -141,12 +123,49 @@ export async function getExpensesData() {
         const transactions = [...normalizedExpenses, ...normalizedIncomes]
             .sort((a, b) => new Date(b.TransactionDate).getTime() - new Date(a.TransactionDate).getTime());
 
+        // Deduplicate lists, preferring current user's own items over admin defaults if names clash
+        const catMap = new Map<string, typeof categories[0]>();
+        categories.forEach(cat => {
+            const key = cat.CategoryName.toLowerCase();
+            if (cat.UserID === userId || !catMap.has(key)) {
+                catMap.set(key, cat);
+            }
+        });
+        const deduplicatedCategories = Array.from(catMap.values());
+
+        const subMap = new Map<string, typeof subCategories[0]>();
+        subCategories.forEach(sub => {
+            const key = `${sub.CategoryID}::${sub.SubCategoryName.toLowerCase()}`;
+            if (sub.UserID === userId || !subMap.has(key)) {
+                subMap.set(key, sub);
+            }
+        });
+        const deduplicatedSubCategories = Array.from(subMap.values());
+
+        const projMap = new Map<string, typeof projects[0]>();
+        projects.forEach(proj => {
+            const key = proj.ProjectName.toLowerCase();
+            if (proj.UserID === userId || !projMap.has(key)) {
+                projMap.set(key, proj);
+            }
+        });
+        const deduplicatedProjects = Array.from(projMap.values());
+
+        const peopMap = new Map<string, typeof people[0]>();
+        people.forEach(p => {
+            const key = p.PeopleName.toLowerCase();
+            if (p.UserID === userId || !peopMap.has(key)) {
+                peopMap.set(key, p);
+            }
+        });
+        const deduplicatedPeople = Array.from(peopMap.values());
+
         return JSON.parse(JSON.stringify({
             transactions,
-            categories,
-            subCategories,
-            projects,
-            people
+            categories: deduplicatedCategories,
+            subCategories: deduplicatedSubCategories,
+            projects: deduplicatedProjects,
+            people: deduplicatedPeople
         }));
     } catch (error) {
         console.error("Error fetching expenses data:", error);

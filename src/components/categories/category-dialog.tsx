@@ -93,7 +93,7 @@ export function CategoryDialog({ category, mode = "create" }: { category?: any, 
                                 <FormItem>
                                     <FormLabel>Category Name</FormLabel>
                                     <FormControl>
-                                        <Input placeholder="E.g. Food, Salary..." {...field} />
+                                        <Input placeholder="E.g. Food, Salary..." {...field} value={field.value ?? ""} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
