@@ -149,7 +149,7 @@ model users {
   EmailAddress   String           @db.VarChar(500)
   Password       String           @db.VarChar(50)
   MobileNo       String           @db.VarChar(50)
-  ProfileImage   String?          @db.VarChar(500)
+  ProfileImage   String?          @db.LongText
   Created        DateTime         @db.DateTime(0)
   Modified       DateTime         @db.DateTime(0)
   Role           String           @default("User") @db.VarChar(50)
