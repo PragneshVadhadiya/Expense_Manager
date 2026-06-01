@@ -53,9 +53,11 @@ export async function login(prevState: any, formData: FormData) {
             path: "/",
         });
 
-    } catch (error) {
-        console.error("Login error:", error);
-        return { message: "An unexpected error occurred" };
+    } catch (error: any) {
+        const errorMsg = error?.message || String(error);
+        const errorCode = error?.code || "unknown";
+        console.error("Login error:", { message: errorMsg, code: errorCode, error });
+        return { message: `Connection error: ${errorCode} - ${errorMsg.substring(0, 200)}` };
     }
 
     // ... existing code ...
@@ -245,9 +247,11 @@ export async function signup(prevState: any, formData: FormData) {
             path: "/",
         });
 
-    } catch (error) {
-        console.error("Signup error:", error);
-        return { message: "An unexpected error occurred during signup" };
+    } catch (error: any) {
+        const errorMsg = error?.message || String(error);
+        const errorCode = error?.code || "unknown";
+        console.error("Signup error:", { message: errorMsg, code: errorCode, error });
+        return { message: `Signup error: ${errorCode} - ${errorMsg.substring(0, 200)}` };
     }
 
     redirect("/dashboard");
